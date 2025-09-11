@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -57,11 +57,22 @@ function App() {
     setShifts((prev) => prev.filter((s) => s.id !== shiftId));
   };
 
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
+
   if (!user) return <AuthForm />;
 
   if (viewSummary) {
     return (
       <div dir="rtl" style={{ fontFamily: "Arial", padding: "2rem" }}>
+        <button
+          onClick={handleLogout}
+          className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded shadow"
+        >
+          התנתק
+        </button>
+
         <h2 style={{ textAlign: "center", color: "green" }}>
           לוח משמרות - סיכום מתנדבים
         </h2>
@@ -79,7 +90,14 @@ function App() {
   }
 
   return (
-    <div dir="rtl" style={{ fontFamily: "Arial", padding: "2rem" }}>
+    <div dir="rtl" style={{ fontFamily: "Arial", padding: "2rem", position: "relative" }}>
+      <button
+        onClick={handleLogout}
+        className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded shadow"
+      >
+        התנתק
+      </button>
+
       <h2 style={{ textAlign: "center", color: "green" }}>
         לוח משמרות - משמר השכונה
       </h2>
@@ -95,7 +113,7 @@ function App() {
               onClick={() => setViewSummary(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded"
             >
-                 סטטיסטיקה של מתנדבים
+              סטטיסטיקה של מתנדבים
             </button>
           </div>
         </>

@@ -10,11 +10,26 @@ export default function AuthForm() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
+  const [error, setError] = useState("");
+
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
+    if (!validateEmail(email)) {
+      setError("אימייל לא תקין");
+      return;
+    }
+
+    if (isRegistering && password !== confirmPassword) {
+      setError("הסיסמאות אינן תואמות");
+      return;
+    }
 
     try {
       let userCredential;
@@ -38,12 +53,12 @@ export default function AuthForm() {
       }
     } catch (error) {
       console.error("Authentication Error:", error.message);
-      alert("שגיאה: " + error.message);
+      setError("שגיאה: " + error.message);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 border rounded shadow">
+    <div className="max-w-md mx-auto mt-20 p-6 border rounded shadow" dir="rtl">
       <h2 className="text-xl font-semibold text-center mb-4">
         {isRegistering ? "הרשמה" : "התחברות"}
       </h2>
@@ -92,6 +107,19 @@ export default function AuthForm() {
           className="border p-2 rounded w-full"
         />
 
+        {isRegistering && (
+          <input
+            type="password"
+            placeholder="אימות סיסמה"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            className="border p-2 rounded w-full"
+          />
+        )}
+
+        {error && <div className="text-red-600 text-sm text-center">{error}</div>}
+
         <button
           type="submit"
           className="bg-green-600 text-white px-4 py-2 rounded w-full"
@@ -101,7 +129,10 @@ export default function AuthForm() {
 
         <button
           type="button"
-          onClick={() => setIsRegistering(!isRegistering)}
+          onClick={() => {
+            setIsRegistering(!isRegistering);
+            setError("");
+          }}
           className="text-blue-600 underline w-full text-center"
         >
           {isRegistering ? "כבר רשום? התחבר" : "אין לך חשבון? הירשם"}
