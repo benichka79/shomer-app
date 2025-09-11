@@ -13,38 +13,32 @@ export default function AuthForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
-  const [error, setError] = useState("");
-
-  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
-    if (!validateEmail(email)) {
-      setError("אימייל לא תקין");
-      return;
-    }
-
-    if (isRegistering && password !== confirmPassword) {
-      setError("הסיסמאות אינן תואמות");
-      return;
+    if (isRegistering) {
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        alert("האימייל אינו תקין");
+        return;
+      }
+      if (password !== confirmPassword) {
+        alert("הסיסמאות אינן תואמות");
+        return;
+      }
     }
 
     try {
-      let userCredential;
-
       if (isRegistering) {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-        // Save user profile to Firestore
         await setDoc(doc(db, "users", userCredential.user.uid), {
           name,
           email,
           group,
         });
 
-        // Default role is "user"
         await setDoc(doc(db, "roles", userCredential.user.uid), {
           role: "user",
         });
@@ -53,7 +47,7 @@ export default function AuthForm() {
       }
     } catch (error) {
       console.error("Authentication Error:", error.message);
-      setError("שגיאה: " + error.message);
+      alert("שגיאה: " + error.message);
     }
   };
 
@@ -98,27 +92,43 @@ export default function AuthForm() {
           className="border p-2 rounded w-full"
         />
 
-        <input
-          type="password"
-          placeholder="סיסמה"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="border p-2 rounded w-full"
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="סיסמה"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="border p-2 rounded w-full pr-16"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute top-1/2 -translate-y-1/2 left-2 text-sm text-blue-600"
+          >
+            {showPassword ? "הסתר" : "הצג"}
+          </button>
+        </div>
 
         {isRegistering && (
-          <input
-            type="password"
-            placeholder="אימות סיסמה"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            className="border p-2 rounded w-full"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="אימות סיסמה"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="border p-2 rounded w-full pr-16"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute top-1/2 -translate-y-1/2 left-2 text-sm text-blue-600"
+            >
+              {showPassword ? "הסתר" : "הצג"}
+            </button>
+          </div>
         )}
-
-        {error && <div className="text-red-600 text-sm text-center">{error}</div>}
 
         <button
           type="submit"
@@ -131,7 +141,8 @@ export default function AuthForm() {
           type="button"
           onClick={() => {
             setIsRegistering(!isRegistering);
-            setError("");
+            setPassword("");
+            setConfirmPassword("");
           }}
           className="text-blue-600 underline w-full text-center"
         >
