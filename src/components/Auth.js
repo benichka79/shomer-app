@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { auth, db } from "../firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import ReCAPTCHA from "react-google-recaptcha";
+
+const SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
 
 export default function AuthForm() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -14,24 +17,34 @@ export default function AuthForm() {
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const recaptchaRef = useRef(null);
+
+  const isValidEmail = (email) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (isRegistering) {
-      if (!/\S+@\S+\.\S+/.test(email)) {
-        alert("האימייל אינו תקין");
-        return;
-      }
-      if (password !== confirmPassword) {
-        alert("הסיסמאות אינן תואמות");
-        return;
-      }
+    if (!isValidEmail(email)) {
+      alert("אימייל לא תקין");
+      return;
+    }
+
+    if (isRegistering && password !== confirmPassword) {
+      alert("הסיסמאות לא תואמות");
+      return;
+    }
+
+    if (isRegistering && !recaptchaRef.current.getValue()) {
+      alert("יש לאמת את reCAPTCHA");
+      return;
     }
 
     try {
+      let userCredential;
+
       if (isRegistering) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         await setDoc(doc(db, "users", userCredential.user.uid), {
           name,
@@ -99,34 +112,31 @@ export default function AuthForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="border p-2 rounded w-full pr-16"
+            className="border p-2 rounded w-full pr-10"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute top-1/2 -translate-y-1/2 left-2 text-sm text-blue-600"
+            className="absolute inset-y-0 left-0 px-3 text-sm text-blue-600"
           >
             {showPassword ? "הסתר" : "הצג"}
           </button>
         </div>
 
         {isRegistering && (
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="אימות סיסמה"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="border p-2 rounded w-full pr-16"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute top-1/2 -translate-y-1/2 left-2 text-sm text-blue-600"
-            >
-              {showPassword ? "הסתר" : "הצג"}
-            </button>
+          <input
+            type="password"
+            placeholder="אימות סיסמה"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            className="border p-2 rounded w-full"
+          />
+        )}
+
+        {isRegistering && (
+          <div className="flex justify-center">
+            <ReCAPTCHA sitekey={SITE_KEY} ref={recaptchaRef} />
           </div>
         )}
 
@@ -139,11 +149,7 @@ export default function AuthForm() {
 
         <button
           type="button"
-          onClick={() => {
-            setIsRegistering(!isRegistering);
-            setPassword("");
-            setConfirmPassword("");
-          }}
+          onClick={() => setIsRegistering(!isRegistering)}
           className="text-blue-600 underline w-full text-center"
         >
           {isRegistering ? "כבר רשום? התחבר" : "אין לך חשבון? הירשם"}
