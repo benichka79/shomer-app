@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     });
 
     return () => unsub();
-  }, []);
+  }, [navigate]); // ✅ הוספת navigate לתלותות
 
   const checkAdminRole = async (uid) => {
     const docRef = doc(db, "roles", uid);
