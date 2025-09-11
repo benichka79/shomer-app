@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     });
 
     return () => unsub();
-  }, [navigate]); // ✅ הוספת navigate לתלותות
+  }, [navigate]); // ✅ נוספה תלות עבור navigate כדי לתקן warning
 
   const checkAdminRole = async (uid) => {
     const docRef = doc(db, "roles", uid);
@@ -73,9 +73,15 @@ export default function AdminDashboard() {
 
   return (
     <div dir="rtl" className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-right text-green-700">
+      <h1 className="text-3xl font-bold mb-4 text-right text-green-700">
         לוח מנהלים - ניהול משמרות 👮‍♂️
       </h1>
+
+      {/* ✅ הצגת מידע על המשתמש */}
+      <p className="text-sm text-right text-gray-500 mb-6">
+        משתמש מחובר: {user?.uid || "לא מזוהה"} | הרשאות:{" "}
+        {isAdmin ? "מנהל" : "משתמש רגיל"}
+      </p>
 
       <table className="w-full border text-right text-sm">
         <thead className="bg-gray-100">
