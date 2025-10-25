@@ -15,8 +15,9 @@ jobs:
 
       # Make the reCAPTCHA site key available at build time
       - name: Set env vars
-        run: echo "REACT_APP_RECAPTCHA_SITE_KEY=${{ secrets.REACT_APP_RECAPTCHA_SITE_KEY }}" >> $GITHUB_ENV
-
+        run: 
+          echo "REACT_APP_RECAPTCHA_SITE_KEY=${{ secrets.REACT_APP_RECAPTCHA_SITE_KEY }}" >> $GITHUB_ENV
+          echo "REACT_APP_RECAPTCHA_VERIFY_URL=${{ secrets.REACT_APP_RECAPTCHA_VERIFY_URL }}" >> $GITHUB_ENV
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
