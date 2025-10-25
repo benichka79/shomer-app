@@ -7,7 +7,8 @@ import {
 import { doc, setDoc } from "firebase/firestore";
 import ReCAPTCHA from "react-google-recaptcha";
 
-const SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
+const SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY;                // from Google reCAPTCHA admin (site key)
+const VERIFY_URL = process.env.REACT_APP_RECAPTCHA_VERIFY_URL;           // <-- set this to your Cloudflare Worker URL
 
 export default function AuthForm() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -17,10 +18,48 @@ export default function AuthForm() {
   const [name, setName] = useState("");
   const [group, setGroup] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const recaptchaRef = useRef(null);
 
-  const isValidEmail = (email) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  async function verifyRecaptcha() {
+    const token = recaptchaRef.current?.getValue();
+    if (!token) {
+      alert("יש לאמת את reCAPTCHA");
+      return false;
+    }
+
+    if (!VERIFY_URL) {
+      alert("Missing REACT_APP_RECAPTCHA_VERIFY_URL");
+      return false;
+    }
+
+    // Call your Cloudflare Worker
+    const res = await fetch(VERIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }).catch(() => null);
+
+    if (!res) {
+      alert("שגיאת רשת בעת אימות reCAPTCHA");
+      recaptchaRef.current?.reset();
+      return false;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    const ok = data && data.success === true;
+
+    if (!ok) {
+      // Optionally show Google error codes from data.details
+      alert("אימות reCAPTCHA נכשל. נסו שוב.");
+      recaptchaRef.current?.reset();
+      return false;
+    }
+
+    return true;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,22 +68,20 @@ export default function AuthForm() {
       alert("אימייל לא תקין");
       return;
     }
-
     if (isRegistering && password !== confirmPassword) {
       alert("הסיסמאות לא תואמות");
       return;
     }
 
-    if (isRegistering && !recaptchaRef.current.getValue()) {
-      alert("יש לאמת את reCAPTCHA");
-      return;
-    }
-
     try {
-      let userCredential;
+      setSubmitting(true);
 
+      // For registration, verify captcha BEFORE creating account
       if (isRegistering) {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const ok = await verifyRecaptcha();
+        if (!ok) return;
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         await setDoc(doc(db, "users", userCredential.user.uid), {
           name,
@@ -55,12 +92,18 @@ export default function AuthForm() {
         await setDoc(doc(db, "roles", userCredential.user.uid), {
           role: "user",
         });
+
+        // reset captcha after success
+        recaptchaRef.current?.reset();
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (error) {
       console.error("Authentication Error:", error.message);
       alert("שגיאה: " + error.message);
+      recaptchaRef.current?.reset();
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -142,9 +185,14 @@ export default function AuthForm() {
 
         <button
           type="submit"
+          disabled={submitting}
           className="bg-green-600 text-white px-4 py-2 rounded w-full"
         >
-          {isRegistering ? "צור חשבון" : "התחבר"}
+          {submitting
+            ? "מעבד..."
+            : isRegistering
+              ? "צור חשבון"
+              : "התחבר"}
         </button>
 
         <button
